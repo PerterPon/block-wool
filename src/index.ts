@@ -104,12 +104,11 @@ async function getOftenStealList(): Promise<Array<TListItem>> {
 let change: string = 'false';
 let emptyTimes: number = 0;
 async function getList(): Promise<Array<TListItem>> {
-    if ( 50 <= emptyTimes ) {
+    if ( 120 <= emptyTimes ) {
         change = 'true';
+        emptyTimes = 0;
     }
     const url: string = `https://blockcity.gxb.io/miner/steal/user/list?change=${ change }&hasLocation=true`;
-    
-    emptyTimes = 0;
     change = 'false';
 
     const res: Response = await getPromise( url, headers );
