@@ -32,6 +32,14 @@ declare module 'main-types' {
         stealPercent: number;
     };
 
+    export type TMineCoin = {
+        id: string;
+        status: number;
+        validTime: number;
+        symbol: string;
+        amount: number;
+    };
+
 }
 
 

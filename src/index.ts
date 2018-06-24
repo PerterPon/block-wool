@@ -10,17 +10,21 @@ import * as request from 'request';
 import * as fs from 'fs-extra';
 import * as moment from 'moment';
 import * as util from 'util';
+import * as path from 'path';
 import "colors";
 
 import { CoreOptions, Response } from 'request';
-import { TListItem, THttpResponse, TCanStealCoin, TStealResult } from 'main-types';
+import { TListItem, THttpResponse, TCanStealCoin, TStealResult, TMineCoin } from 'main-types';
+
+const Authorization: string = process.argv[ 2 ];
+const UserId: string = process.argv[ 3 ];
 
 const getPromise: ( uri: string, options: CoreOptions ) => Promise<Response> = util.promisify<string, CoreOptions, Response>( request.get );
 const postPromise: ( uri: string, options: CoreOptions ) => Promise<Response> = util.promisify<string, CoreOptions, Response>( request.post );
 
 const headers: CoreOptions = {
     headers : {
-        Authorization: process.argv[ 2 ],
+        Authorization: Authorization,
         Host: 'walletgateway.gxb.io',
         Origin: 'https://blockcity.gxb.io',
         "Accept-Encoding": "br, gzip, deflate",
@@ -47,32 +51,52 @@ async function start(): Promise<void> {
 
     while( true ) {
         await randomSleep();
-        const data: Array<TListItem> = await getList();
+        const mines: Array<TMineCoin> = await getMysqlSelfCoinList();
 
+        for( let i = 0; i < mines.length; i ++ ) {
+            const mineCoin: TMineCoin = mines[ i ];
+            const validTime: number = mineCoin.validTime;
+            if ( validTime <= Date.now() ) {
+                await getMinedCoin( mineCoin );
+            }
+        }
+
+        await randomSleep();
+        const data: Array<TListItem> = await getList();
+        let haveStealCoin: boolean = false;
         for( let i = 0; i < data.length; i ++ ) {
             const item: TListItem = data[ i ];
             if( true === item.canSteal ) {
+                haveStealCoin = true;
                 await randomSleep();
                 const stealCoins: Array<TCanStealCoin> = await listCanStealCoins( item.userId );
                 for ( let j = 0; j < stealCoins.length; j ++ ) {
                     const canStealCoin: TCanStealCoin = stealCoins[ j ];
                     if ( true === canStealCoin.canSteal ) {
-                        await randomSleep();
                         await stealCoin( item.userId, canStealCoin );
                     }
                 }
             }
+        }
+        if ( false === haveStealCoin ) {
+            emptyTimes ++;
         }
 
     }
 
 }
 
-let change: string = 'true';
-
+let change: string = 'false';
+let emptyTimes: number = 0;
 async function getList(): Promise<Array<TListItem>> {
-    console.log( 'getting user list...'.yellow );
+    if ( 20 >= emptyTimes ) {
+        change = 'true';
+    }
     const url: string = `https://blockcity.gxb.io/miner/steal/user/list?change=${ change }&hasLocation=true`;
+    
+    emptyTimes = 0;
+    change = 'false';
+
     const res: Response = await getPromise( url, headers );
     const resData: THttpResponse<Array<TListItem>> = JSON.parse( res.body );
 
@@ -113,30 +137,58 @@ async function stealCoin( userId: string, canStealCoin: TCanStealCoin ): Promise
     const resData: THttpResponse<TStealResult> = JSON.parse( res.body );
 
     if ( null === resData.message ) {
-        await store( canStealCoin, resData.data );
+        await store( 'steal', canStealCoin.symbol, resData.data.stealAmount );
     } else {
         throw new Error( resData.message );
     }
 
 }
 
-async function store( canStealCoin: TCanStealCoin, result: TStealResult ): Promise<void> {
+async function getMysqlSelfCoinList(): Promise<Array<TMineCoin>> {
 
-    console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] steal new coin: [${ canStealCoin.symbol }] amount: [${ result.stealAmount }]`.green );
+    const url: string = `https://blockcity.gxb.io/miner/${ UserId }/mine/list/v2`;
+    const res: Response = await getPromise( url, headers );
+    const resData: THttpResponse<{ mines: Array<TMineCoin> }> = JSON.parse( res.body );
+    const mines: Array<TMineCoin> = resData.data.mines;
 
-    const stoneFile: string = "/Users/Pon/Documents/Project/block-wool/src/count.json";
-    const file: string = fs.readFileSync( stoneFile, 'utf-8' );
-
-    try {
-        const stone: { [name: string]: any }  = JSON.parse( file ) || {};
-        const { symbol } = canStealCoin;
-        const { stealAmount } = result;
-        const nowCount: number = stone[ symbol ] || 0;
-        stone[ symbol ] = nowCount + stealAmount;
-        fs.writeFileSync( stoneFile, JSON.stringify( stone, <any>'', 2 ) );
-    } catch( e ) { console.error( e.message.red ); }
+    if ( null === resData.message ) {
+        return resData.data.mines;
+    } else {
+        throw new Error( resData.message );
+    }
 
 }
+
+async function getMinedCoin( mineCoin: TMineCoin ): Promise<void> {
+
+    console.log( `getting mined coin: [${ mineCoin.symbol }], amount: [${ mineCoin.amount }]` );
+    const url: string = `https://blockcity.gxb.io/miner/${ UserId }/mine/${ mineCoin.id }/v2`;
+    const res: Response = await getPromise( url, headers );
+    const resData: THttpResponse<{ drawAmount: number }> = JSON.parse( res.body );
+
+    if ( null === resData.message ) {
+        await store( 'mine', mineCoin.symbol, resData.data.drawAmount );
+    } else {
+        throw new Error( resData.message );
+    }
+
+}
+
+async function store( type: 'steal'|'mine', symbol: string, amount: number ): Promise<void> {
+    console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] store new coin: [${ symbol }], amount: [ ${ amount } ]` );
+
+    // const stoneFile: string = "~/Documents/Project/block-wool/src/count.json";
+    const stoneFile: string = path.join( __dirname, '../../count.json' );
+    const file: string = fs.readFileSync( stoneFile, 'utf-8' );
+    try {
+        const store: { steal: { [ name: string ] : number }, mine: { [name: string] : number } } = JSON.parse( file ) || {};
+        const target: { [name: string] : number } = store[ type ];
+        const nowCount: number = target[ symbol ] || 0;
+        target[ symbol ] = nowCount + amount;
+        fs.writeFileSync( stoneFile, JSON.stringify( store, <any>'', 2 ) );
+    } catch( e ) { console.error(  e.message.red ); }
+
+}   
 
 async function startShell(): Promise<void> {
 
