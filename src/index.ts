@@ -22,6 +22,8 @@ const UserId: string = process.argv[ 3 ];
 const getPromise: ( uri: string, options: CoreOptions ) => Promise<Response> = util.promisify<string, CoreOptions, Response>( request.get );
 const postPromise: ( uri: string, options: CoreOptions ) => Promise<Response> = util.promisify<string, CoreOptions, Response>( request.post );
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const headers: CoreOptions = {
     headers : {
         Authorization: Authorization,
@@ -50,7 +52,6 @@ async function randomSleep( times: number = 1 ): Promise<void> {
 async function start(): Promise<void> {
 
     while( true ) {
-        await randomSleep( 6 );
         const mines: Array<TMineCoin> = await getMysqlSelfCoinList();
 
         for( let i = 0; i < mines.length; i ++ ) {
@@ -83,7 +84,7 @@ async function start(): Promise<void> {
         if ( false === haveStealCoin ) {
             emptyTimes ++;
         }
-
+        await randomSleep( 6 );
     }
 
 }
