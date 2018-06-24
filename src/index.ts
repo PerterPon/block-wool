@@ -43,14 +43,14 @@ function sleep( time: number ): Promise<void> {
 
 }
 
-async function randomSleep(): Promise<void> {
-    await sleep( Math.random() * 10 * 1000 );
+async function randomSleep( times: number = 1 ): Promise<void> {
+    await sleep( Math.random() * 10 * 1000 * times );
 }
 
 async function start(): Promise<void> {
 
     while( true ) {
-        await randomSleep();
+        await randomSleep( 6 );
         const mines: Array<TMineCoin> = await getMysqlSelfCoinList();
 
         for( let i = 0; i < mines.length; i ++ ) {
@@ -62,7 +62,9 @@ async function start(): Promise<void> {
         }
 
         await randomSleep();
-        const data: Array<TListItem> = await getList();
+        let data: Array<TListItem> = await getList();
+        const oftenStealList: Array<TListItem> = await getOftenStealList();
+        data = data.concat( oftenStealList );
         let haveStealCoin: boolean = false;
         for( let i = 0; i < data.length; i ++ ) {
             const item: TListItem = data[ i ];
@@ -86,10 +88,23 @@ async function start(): Promise<void> {
 
 }
 
+async function getOftenStealList(): Promise<Array<TListItem>> {
+
+    const url: string = 'https://blockcity.gxb.io/miner/steal/often/list';
+    const res: Response = await getPromise( url, headers );
+    const resData: THttpResponse<Array<TListItem>> = JSON.parse( res.body );
+    if ( null === resData.message ) {
+        return resData.data;
+    } else {
+        throw new Error( resData.message );
+    }
+
+}
+
 let change: string = 'false';
 let emptyTimes: number = 0;
 async function getList(): Promise<Array<TListItem>> {
-    if ( 20 >= emptyTimes ) {
+    if ( 50 <= emptyTimes ) {
         change = 'true';
     }
     const url: string = `https://blockcity.gxb.io/miner/steal/user/list?change=${ change }&hasLocation=true`;
