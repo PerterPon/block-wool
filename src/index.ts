@@ -52,6 +52,14 @@ async function randomSleep( times: number = 1 ): Promise<void> {
 async function start(): Promise<void> {
 
     while( true ) {
+
+        const nowTime: moment.Moment = moment();
+        // 0点到6点之间无产出
+        if ( 0 < nowTime.hour() && 6 > nowTime.hour() ) {
+            await sleep( 60 * 1000 );
+            continue;
+        }
+
         const mines: Array<TMineCoin> = await getMysqlSelfCoinList();
 
         for( let i = 0; i < mines.length; i ++ ) {
