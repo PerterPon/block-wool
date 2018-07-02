@@ -113,7 +113,7 @@ async function getOftenStealList(): Promise<Array<TListItem>> {
 let change: string = 'false';
 let emptyTimes: number = 0;
 async function getList(): Promise<Array<TListItem>> {
-    if ( 70 <= emptyTimes ) {
+    if ( 45 <= emptyTimes ) {
         change = 'true';
         emptyTimes = 0;
     }
