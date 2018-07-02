@@ -55,7 +55,7 @@ async function start(): Promise<void> {
 
         const nowTime: moment.Moment = moment();
         // 0点到6点之间无产出
-        if ( 0 < nowTime.hour() && 6 > nowTime.hour() ) {
+        if ( 0 <= nowTime.hour() && 6 > nowTime.hour() ) {
             await sleep( 60 * 1000 );
             continue;
         }
