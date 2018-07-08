@@ -28,11 +28,11 @@ const headers: CoreOptions = {
     headers : {
         Authorization: Authorization,
         Host: 'walletgateway.gxb.io',
-        Origin: 'https://blockcity.gxb.io',
+        Origin: 'https://walletgateway.gxb.io',
         "Accept-Encoding": "br, gzip, deflate",
         "Accept": "application/json, text/plain, */*",
         "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 11_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E302 (5880463872)",
-        "Referer": "https://blockcity.gxb.io/",
+        "Referer": "https://walletgateway.gxb.io/",
         "Accept-Language": "zh-CN"
     }
 };
@@ -99,7 +99,7 @@ async function start(): Promise<void> {
 
 async function getOftenStealList(): Promise<Array<TListItem>> {
 
-    const url: string = 'https://blockcity.gxb.io/miner/steal/often/list';
+    const url: string = 'https://walletgateway.gxb.io/miner/steal/often/list';
     const res: Response = await getPromise( url, headers );
     const resData: THttpResponse<Array<TListItem>> = JSON.parse( res.body );
     if ( null === resData.message ) {
@@ -117,16 +117,16 @@ async function getList(): Promise<Array<TListItem>> {
         change = 'true';
         emptyTimes = 0;
     }
-    const url: string = `https://blockcity.gxb.io/miner/steal/user/list?change=${ change }&hasLocation=true`;
+    const url: string = `https://walletgateway.gxb.io/miner/steal/user/list/v2?change=${ change }&hasLocation=true`;
     change = 'false';
 
     const res: Response = await getPromise( url, headers );
-    const resData: THttpResponse<Array<TListItem>> = JSON.parse( res.body );
+    const resData: THttpResponse<{ leftAmount: number, list: Array<TListItem>}> = JSON.parse( res.body );
 
     let data: Array<TListItem> = [];
 
     if ( null === resData.message ) {
-        data = resData.data;
+        data = resData.data.list;
     } else {
         throw new Error( resData.message );
     }
@@ -137,7 +137,7 @@ async function getList(): Promise<Array<TListItem>> {
 async function listCanStealCoins( userId: string ): Promise<Array<TCanStealCoin>> {
 
     console.log( 'getting can steal coins...'.yellow );
-    const url: string = `https://blockcity.gxb.io/miner/steal/${ userId }/mine/list`;
+    const url: string = `https://walletgateway.gxb.io/miner/steal/${ userId }/mine/list`;
     const res: Response  = await getPromise( <any>url, <any>headers );
     const resData: THttpResponse<Array<TCanStealCoin>> = JSON.parse( res.body );
 
@@ -155,7 +155,7 @@ async function listCanStealCoins( userId: string ): Promise<Array<TCanStealCoin>
 async function stealCoin( userId: string, canStealCoin: TCanStealCoin ): Promise<void> {
 
     console.log( 'stealing coin ...'.yellow );
-    const url: string = `https://blockcity.gxb.io/miner/steal/${ userId }/mine/${ canStealCoin.mineId }`;
+    const url: string = `https://walletgateway.gxb.io/miner/steal/${ userId }/mine/${ canStealCoin.mineId }`;
     const res: Response = await postPromise( <any>url, <any>headers );
     const resData: THttpResponse<TStealResult> = JSON.parse( res.body );
 
@@ -169,7 +169,7 @@ async function stealCoin( userId: string, canStealCoin: TCanStealCoin ): Promise
 
 async function getMysqlSelfCoinList(): Promise<Array<TMineCoin>> {
 
-    const url: string = `https://blockcity.gxb.io/miner/${ UserId }/mine/list/v2`;
+    const url: string = `https://walletgateway.gxb.io/miner/${ UserId }/mine/list/v2`;
     const res: Response = await getPromise( url, headers );
     const resData: THttpResponse<{ mines: Array<TMineCoin> }> = JSON.parse( res.body );
     const mines: Array<TMineCoin> = resData.data.mines;
@@ -185,7 +185,7 @@ async function getMysqlSelfCoinList(): Promise<Array<TMineCoin>> {
 async function getMinedCoin( mineCoin: TMineCoin ): Promise<void> {
 
     console.log( `getting mined coin: [${ mineCoin.symbol }], amount: [${ mineCoin.amount }]` );
-    const url: string = `https://blockcity.gxb.io/miner/${ UserId }/mine/${ mineCoin.id }/v2`;
+    const url: string = `https://walletgateway.gxb.io/miner/${ UserId }/mine/${ mineCoin.id }/v2`;
     const res: Response = await getPromise( url, headers );
     const resData: THttpResponse<{ drawAmount: number }> = JSON.parse( res.body );
 
