@@ -112,9 +112,11 @@ async function getOftenStealList(): Promise<Array<TListItem>> {
 
 let change: string = 'false';
 let emptyTimes: number = 0;
+let thresholdTimes: number = 40;
 async function getList(): Promise<Array<TListItem>> {
-    if ( 45 <= emptyTimes ) {
+    if ( thresholdTimes <= emptyTimes ) {
         change = 'true';
+        console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] change list` );
         emptyTimes = 0;
     }
     const url: string = `https://walletgateway.gxb.io/miner/steal/user/list/v2?change=${ change }&hasLocation=true`;
@@ -126,7 +128,9 @@ async function getList(): Promise<Array<TListItem>> {
     let data: Array<TListItem> = [];
 
     if ( null === resData.message ) {
-        data = resData.data.list;
+        const { leftAmount, list } = resData.data;
+        thresholdTimes = calculateThresholdTimes( leftAmount );
+        data = list;
     } else {
         throw new Error( resData.message );
     }
@@ -134,9 +138,23 @@ async function getList(): Promise<Array<TListItem>> {
     return data;
 }
 
+function calculateThresholdTimes( leftAmount: number ): number {
+
+    const leftTimes: number = leftAmount / 8;
+    const lastTime: moment.Moment = moment();
+    lastTime.hours( 23 );
+    lastTime.minutes( 59 );
+    lastTime.seconds( 59 );
+    const leftTime: number = +lastTime - +moment();
+    const leftSeconds: number = Math.floor( leftTime / 1000 );
+    const leftCycleTimes: number = Math.floor( leftSeconds / ( 3 * 6 ) );
+    return Math.floor( leftCycleTimes / leftTimes );
+
+}
+
 async function listCanStealCoins( userId: string ): Promise<Array<TCanStealCoin>> {
 
-    console.log( 'getting can steal coins...'.yellow );
+    console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] getting can steal coins...`.yellow );
     const url: string = `https://walletgateway.gxb.io/miner/steal/${ userId }/mine/list`;
     const res: Response  = await getPromise( <any>url, <any>headers );
     const resData: THttpResponse<Array<TCanStealCoin>> = JSON.parse( res.body );
@@ -154,7 +172,7 @@ async function listCanStealCoins( userId: string ): Promise<Array<TCanStealCoin>
 
 async function stealCoin( userId: string, canStealCoin: TCanStealCoin ): Promise<void> {
 
-    console.log( 'stealing coin ...'.yellow );
+    console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] stealing coin ...`.yellow );
     const url: string = `https://walletgateway.gxb.io/miner/steal/${ userId }/mine/${ canStealCoin.mineId }`;
     const res: Response = await postPromise( <any>url, <any>headers );
     const resData: THttpResponse<TStealResult> = JSON.parse( res.body );
@@ -184,7 +202,7 @@ async function getMysqlSelfCoinList(): Promise<Array<TMineCoin>> {
 
 async function getMinedCoin( mineCoin: TMineCoin ): Promise<void> {
 
-    console.log( `getting mined coin: [${ mineCoin.symbol }], amount: [${ mineCoin.amount }]` );
+    console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] getting mined coin: [${ mineCoin.symbol }], amount: [${ mineCoin.amount }]` );
     const url: string = `https://walletgateway.gxb.io/miner/${ UserId }/mine/${ mineCoin.id }/v2`;
     const res: Response = await getPromise( url, headers );
     const resData: THttpResponse<{ drawAmount: number }> = JSON.parse( res.body );
@@ -200,7 +218,6 @@ async function getMinedCoin( mineCoin: TMineCoin ): Promise<void> {
 async function store( type: 'steal'|'mine', symbol: string, amount: number ): Promise<void> {
     console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] store new coin: [${ symbol }], amount: [ ${ amount } ]` );
 
-    // const stoneFile: string = "~/Documents/Project/block-wool/src/count.json";
     const stoneFile: string = path.join( __dirname, '../../count.json' );
     const file: string = fs.readFileSync( stoneFile, 'utf-8' );
     try {
@@ -219,7 +236,7 @@ async function startShell(): Promise<void> {
         await start();
     } catch( e ) {
         console.error( e );
-        console.error( 'waiting for restart ...'.red );
+        console.error( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] waiting for restart ...`.red );
         setTimeout( startShell, 5 * 1000 );
     }
 
@@ -228,9 +245,9 @@ async function startShell(): Promise<void> {
 startShell();
 
 process.on( 'uncaughtException', ( error: Error ) => {
-    console.error( `uncaughtException\n${ error.message }\n${ error.stack }`.red );
+    console.error( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] uncaughtException\n${ error.message }\n${ error.stack }`.red );
 } );
 
 process.on( 'unhandledRejection', () => {
-    console.error( 'unhandledRejection'.red );
+    console.error( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] unhandledRejection`.red );
 } );
