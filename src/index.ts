@@ -226,7 +226,7 @@ async function store( type: 'steal'|'mine', symbol: string, amount: number ): Pr
         const nowCount: number = target[ symbol ] || 0;
         target[ symbol ] = nowCount + amount;
         fs.writeFileSync( stoneFile, JSON.stringify( store, <any>'', 2 ) );
-    } catch( e ) { console.error(  e.message.red ); }
+    } catch( e ) { console.log(  e.message.red ); }
 
 }   
 
@@ -235,8 +235,8 @@ async function startShell(): Promise<void> {
     try {
         await start();
     } catch( e ) {
-        console.error( e );
-        console.error( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] waiting for restart ...`.red );
+        console.log( e );
+        console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] waiting for restart ...`.red );
         setTimeout( startShell, 5 * 1000 );
     }
 
@@ -245,9 +245,9 @@ async function startShell(): Promise<void> {
 startShell();
 
 process.on( 'uncaughtException', ( error: Error ) => {
-    console.error( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] uncaughtException\n${ error.message }\n${ error.stack }`.red );
+    console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] uncaughtException\n${ error.message }\n${ error.stack }`.red );
 } );
 
 process.on( 'unhandledRejection', () => {
-    console.error( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] unhandledRejection`.red );
+    console.log( `[${ moment().format( 'YYYY-MM-DD HH:mm:ss' ) }] unhandledRejection`.red );
 } );
