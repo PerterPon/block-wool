@@ -46,7 +46,7 @@ function sleep( time: number ): Promise<void> {
 }
 
 async function randomSleep( times: number = 1 ): Promise<void> {
-    await sleep( Math.random() * 6 * 1000 * times );
+    await sleep( Math.random() * 4 * 1000 * times );
 }
 
 async function start(): Promise<void> {
